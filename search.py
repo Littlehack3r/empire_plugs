@@ -1,20 +1,20 @@
 """
-lumberjack.py
-A plugin that will call a function whenever an agent checks in
+search.py
+A plugin to search agents based on team or ip
 
 INSTALLATION:
-    cp lumberjack.py empire/plugins
+    cp search.py empire/plugins
 
 USAGE (In empire):
-    plugin lumberjack
+    plugin search
 """
 
 import requests
 import functools
 from lib.common.plugins import Plugin
-from lib.common.plugins import Plugin
 import lib.common.helpers as helpers
 from datetime import datetime
+
 
 class Plugin(Plugin):
     description = "A plugin to feed session checkins to the pwnboard and Sawmill"
@@ -39,7 +39,7 @@ class Plugin(Plugin):
 	delay = agent['delay']
 
 	delta = datetime.now() - datetime.strptime(stamp, "%Y-%m-%d %H:%M:%S")
-        
+
 	if delta.seconds > delay * (jitter + 1) * 5:
             return 'dead'
         elif delta.seconds > delay * (jitter + 1):
@@ -51,16 +51,21 @@ class Plugin(Plugin):
         """Search for a specific agent
         """
         agents = self.mainMenu.agents.get_agents_db()
-        
+
         args = args.split()
-        if len(args) != 2:
-            print('usage: search <team#> <hostname>')
+
+        if len(args) == 0:
+            print('usage: search <team#> <hostname> <option>')
+	    print('Options:')
+	    print('-l 		List active agents')
             return 1
         searchteam = args[0]
         searchhost = args[1]
-
-        valid_agents = [] # Agents that match the search criteria
-        
+        lst = False
+        if len(args) == 3:
+            if args[2] == '-l':
+                lst = True
+        valid_agents = []  # Agents that match the search criteria
 
         for agent in agents:
             team_num = agent['internal_ip'].split('.')[1]
@@ -68,41 +73,48 @@ class Plugin(Plugin):
                 if searchhost.lower() == agent['hostname'].lower():
                     if self.isAgentAlive(agent) == 'alive':
                         valid_agents.append(agent)
-        
-        
-        valid_agents = sorted(valid_agents, key=lambda x:x['delay'])
-        
+
+        valid_agents = sorted(valid_agents, key=lambda x: x['delay'])
+
+        if lst:
+            if valid_agents:
+                print('Name	  	 IP			Hostname		Last Seen')
+                print('---------	 ---------	        ----------              ---------------------')
+                for agent in valid_agents:
+                    print(agent['name'] + '	 ' + agent['internal_ip'] + ' 	' + agent['hostname'] + helpers.color('\t\t\t[+]' + agent['lastseen_time']))
+            else:
+                print(helpers.color('[!] No agents alive found for ' + searchteam + ' ' + searchhost))
+
+            return 1
+
         if valid_agents:
             print(helpers.color('[+] found agent {}'.format(valid_agents[0]['name'])))
             self.mainMenu.do_interact(valid_agents[0]['name'])
         else:
-            print(helpers.color('[!] No agents alive found for ' +  searchteam + ' '+ searchhost) )
+            print(helpers.color('[!] No agents alive found for ' + searchteam + ' ' + searchhost))
 
 
     def do_searchIP(self, args):
         """Interact with agent based on IP
         """
-        agents = self.mainMenu.agents.get_agents_db()
+        agents=self.mainMenu.agents.get_agents_db()
 
         if not args.strip():
             print('usage: searchip <ip>')
             return 1
-        ip = args
+        ip=args
 
-        valid_agents = []
+        valid_agents=[]
 
         for agent in agents:
             if ip == agent['internal_ip']:
                 valid_agents.append(agent)
 
-        valid_agents = sorted(valid_agents, key=lambda x:x['delay'])
+        valid_agents=sorted(valid_agents, key=lambda x: x['delay'])
 
         if valid_agents:
             print(helpers.color('[+] found agent {}'.format(valid_agents[0]['name'])))
             self.mainMenu.do_interact(valid_agents[0]['name'])
         else:
             print(helpers.color('[!] No agents alive found for ' + ip))
-
-
-
 
