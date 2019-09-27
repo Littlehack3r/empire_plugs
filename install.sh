@@ -19,11 +19,6 @@ set Name external
 set DefaultDelay 15
 set DefaultLostLimit 10
 execute
-main
-usestager multi/python_raw
-set Listener external
-set Outfile /tmp/stager.py
-generate
-""" > load.rc 
+"""
 
 echo "run empire with ./empire --resource load.rc"
